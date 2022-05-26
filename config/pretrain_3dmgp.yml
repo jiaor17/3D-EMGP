@@ -1,0 +1,52 @@
+train:
+  batch_size: 64
+  seed: 2021
+  epochs: 300
+  shuffle: true
+  resume_train: false
+  eval: true
+  num_workers: 0  
+  save: true
+  save_path: checkpoints/pretrain
+  log_interval: 100
+  clip: 5.0
+  mask_ratio: 0.15
+  steps: 1
+  loss_denoise: 1.0
+  loss_pred_noise: 0.2
+  optimizer:
+    type: Adam
+    lr: 0.001
+    weight_decay: 0.000
+    dropout: 0.0
+  scheduler:
+    type: cosine
+    epochs: 300
+    min_lr: 0.00001
+
+
+data:
+  block_dir: datasets/GEOM/blocks
+
+model:
+  name: 3dmgp
+  backbone: EGNN
+  hidden_dim: 128
+  sigma_begin: 10
+  sigma_end: 0.01
+  num_noise_level: 50
+  order: 3
+  cutoff: null 
+  noise_type: riemann
+  pred_mode: energy
+  no_edge_types: False
+  sigma_order: 2
+  use_last_only: True
+  layernorm: False
+  max_atom_type: 100
+  charge_power: 2
+  n_layers: 7
+  attention: true
+
+
+

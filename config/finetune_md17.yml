@@ -1,0 +1,43 @@
+train:
+  batch_size: 100
+  seed: 2021
+  epochs: 1500
+  num_workers: 0
+  restore_path: null
+  save_path: checkpoints/finetune/md17
+  log_interval: 10
+  lr: 0.0005
+  factor: 0.9
+  patience: 30
+  min_lr: 0.000001
+  energy_weight: 0.2
+  force_weight: 0.8
+  weight_decay: 1e-16
+
+
+test:
+  test_interval: 1
+  test_batch_size: 100
+
+
+data:
+  base_path: datasets/md17
+  molecule: uracil
+  num_train: 9500
+  num_val: 500
+  
+
+model:
+  name: md17
+  hidden_dim: 128
+  attention: true
+  n_layers: 7
+  max_atom_type: 100
+  charge_power: 2
+  cutoff: 5.0
+  layernorm: False
+
+
+
+
+
