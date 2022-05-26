@@ -54,41 +54,6 @@ python -m torch.distributed.launch --nproc_per_node=4 --master_port <port> scrip
 
 The pretrained model will be saved in `checkpoints/pretrain/3dmgp`, which can be modified in `config/pretrain_3dmgp.yml`
 
-### Finetuning
-
-Finetuning on QM9 :
-
-```
-python -u script/finetune_qm9.py --config_path config/finetune_qm9.yml --restore_path <pretrained_checkpoint> --property <property>
-```
-
-The property should be chosen from
-
-```
-alpha, gap, homo, lumo, mu, Cv, G, H, r2, U, U0, zpve
-```
-
-Finetuning on MD17 :
-
-```
-python -u script/finetune_qm9.py --config_path config/finetune_qm9.yml --restore_path <pretrained_checkpoint> --molecule <molecule> --model_name <molecule>
-```
-
-The molecule should be chosen from
-
-```
-aspirin
-benzene
-ethanol
-malonaldehyde
-naphthalene
-salicylic_acid
-toluene
-uracil
-```
-
-Note that the finetuning datasets will be automatically downloaded and preprocessed on the first run.
-
 ### Dependencies
 
 ```

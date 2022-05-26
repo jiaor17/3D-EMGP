@@ -11,7 +11,6 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.data import Data, Dataset
 from torch_geometric.transforms import Compose
-from torch_geometric.utils import to_networkx
 from torch_geometric.utils import to_dense_adj, dense_to_sparse, subgraph
 from torch_scatter import scatter
 from torch_sparse import SparseTensor
@@ -22,9 +21,7 @@ import rdkit
 from rdkit import Chem
 from rdkit.Chem.rdchem import Mol, HybridizationType, BondType
 from rdkit import RDLogger
-import networkx as nx
 from tqdm import tqdm
-# from descriptastorus.descriptors import rdDescriptors
 RDLogger.DisableLog('rdApp.*')
 
 
@@ -90,7 +87,6 @@ class GEOMDataset(Dataset):
         return self.len
 
     def __getitem__(self, idx):
-        # print(idx)
         dp_idx = idx // self.sample_per_file
         real_idx = idx % self.sample_per_file
         tar = self.data[dp_idx][real_idx].clone()
@@ -135,9 +131,6 @@ def BFS(graph):
             visited_list.append(u)
             unvisited_set.remove(u)
 
-            # for v in range(num_node):
-            #     if (v not in visited_list) and ((u,v) in edge_set):
-            #         queue.append(v)
             for v in edge_dict[u]:
                 if v not in visited_list:
                     queue.append(v)
@@ -316,47 +309,6 @@ class GEOMDatasetCL(GEOMDataset):
             data1 = self.transforms(data1)   
             data2 = self.transforms(data2)
         return data1, data2
-
-# RDKIT_PROPS = ['fr_Al_COO', 'fr_Al_OH', 'fr_Al_OH_noTert', 'fr_ArN',
-#                'fr_Ar_COO', 'fr_Ar_N', 'fr_Ar_NH', 'fr_Ar_OH', 'fr_COO', 'fr_COO2',
-#                'fr_C_O', 'fr_C_O_noCOO', 'fr_C_S', 'fr_HOCCN', 'fr_Imine', 'fr_NH0',
-#                'fr_NH1', 'fr_NH2', 'fr_N_O', 'fr_Ndealkylation1', 'fr_Ndealkylation2',
-#                'fr_Nhpyrrole', 'fr_SH', 'fr_aldehyde', 'fr_alkyl_carbamate', 'fr_alkyl_halide',
-#                'fr_allylic_oxid', 'fr_amide', 'fr_amidine', 'fr_aniline', 'fr_aryl_methyl',
-#                'fr_azide', 'fr_azo', 'fr_barbitur', 'fr_benzene', 'fr_benzodiazepine',
-#                'fr_bicyclic', 'fr_diazo', 'fr_dihydropyridine', 'fr_epoxide', 'fr_ester',
-#                'fr_ether', 'fr_furan', 'fr_guanido', 'fr_halogen', 'fr_hdrzine', 'fr_hdrzone',
-#                'fr_imidazole', 'fr_imide', 'fr_isocyan', 'fr_isothiocyan', 'fr_ketone',
-#                'fr_ketone_Topliss', 'fr_lactam', 'fr_lactone', 'fr_methoxy', 'fr_morpholine',
-#                'fr_nitrile', 'fr_nitro', 'fr_nitro_arom', 'fr_nitro_arom_nonortho',
-#                'fr_nitroso', 'fr_oxazole', 'fr_oxime', 'fr_para_hydroxylation', 'fr_phenol',
-#                'fr_phenol_noOrthoHbond', 'fr_phos_acid', 'fr_phos_ester', 'fr_piperdine',
-#                'fr_piperzine', 'fr_priamide', 'fr_prisulfonamd', 'fr_pyridine', 'fr_quatN',
-#                'fr_sulfide', 'fr_sulfonamd', 'fr_sulfone', 'fr_term_acetylene', 'fr_tetrazole',
-#                'fr_thiazole', 'fr_thiocyan', 'fr_thiophene', 'fr_unbrch_alkane', 'fr_urea']
-
-# def get_motif_label(smiles):
-#     generator = rdDescriptors.RDKit2D(RDKIT_PROPS)
-#     features = generator.process(smiles)[1:]
-#     features = np.array(features)
-#     features[features != 0] = 1
-#     return torch.FloatTensor(features)  
-
-# class GEOMDatasetMotif(GEOMDataset):
-#     def __init__(self, data=None, graph_per_file=None, transforms = None):
-#         super(GEOMDatasetMotif, self).__init__(data, graph_per_file, transforms)
-
-#     def __getitem__(self, idx):
-#         # d = self.data[idx]
-#         dp_idx = idx // self.sample_per_file
-#         real_idx = idx % self.sample_per_file
-#         d = self.data[dp_idx][real_idx]
-#         if not hasattr(d,"motif"):
-#             d.motif = get_motif_label(d.smiles)
-#         data = d.clone()
-#         if self.transforms is not None:
-#             data = self.transforms(data)        
-#         return data    
 
 
 
