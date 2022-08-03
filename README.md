@@ -40,19 +40,26 @@ Generated data blocks are listed as follows.
 
 3D-MGP pretraining can be conducted via the following commands.
 
-```
+```shell
 export CUDA_VISIBLE_DEVICES=0
 python -u script/pretrain_3dmgp.py --config_path config/pretrain_3dmgp.yml
 ```
 
 One can also pretrain the model in a multi-GPU mode.
 
-```
+```shell
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 python -m torch.distributed.launch --nproc_per_node=4 --master_port <port> script/pretrain_3dmgp.py --config_path config/pretrain_3dmgp.yml
 ```
 
 The pretrained model will be saved in `checkpoints/pretrain/3dmgp`, which can be modified in `config/pretrain_3dmgp.yml`
+
+One can also pretrain the 3D model via the re-implemented baseline methods via the following commands. Take AttrMask as an example:
+
+```shell
+export CUDA_VISIBLE_DEVICES=0
+python -u script/baselines/train_attr_mask.py --config_path config/pretrain_baselines.yml
+```
 
 ### Dependencies
 

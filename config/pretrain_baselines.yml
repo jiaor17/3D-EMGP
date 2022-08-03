@@ -1,0 +1,67 @@
+train:
+  batch_size: 64
+  seed: 2021
+  epochs: 300
+  shuffle: true
+  resume_train: false
+  eval: true
+  num_workers: 0  
+  anneal_power: 2.0
+  save: true
+  save_path: checkpoints/pretrain
+  log_interval: 100
+  clip: 5.0
+  mask_ratio: 0.15
+  cl_neg_samples: 1
+  T: 0.1
+  optimizer:
+    type: Adam
+    lr: 0.0005
+    weight_decay: 0.000
+    dropout: 0.0
+  scheduler:
+    type: cosine
+    epochs: 300
+    min_lr: 0.00001
+
+
+data:
+  block_dir: datasets/GEOM/blocks
+
+
+model:
+  name: 3dmgp
+  backbone: EGNN
+  hidden_dim: 128
+  sigma_begin: 10
+  sigma_end: 0.01
+  num_noise_level: 50
+  order: 3
+  cutoff: null 
+  no_edge_types: False
+  sigma_order: 2
+  use_last_only: True
+  layernorm: False
+  max_atom_type: 100
+  charge_power: 2
+  n_layers: 7
+  attention: true
+
+
+# For GraphMVP
+# gnn_model:
+#   num_layer: 5
+#   JK: last
+#   dropout_ratio: 0.0
+#   gnn_type: gin
+#   edge_type: 20
+
+
+# For 3D Infomax
+# gnn_model:
+#   num_layer: 7
+#   JK: last
+#   dropout_ratio: 0.0
+#   gnn_type: pna
+#   edge_type: 20
+#   tau: 0.1

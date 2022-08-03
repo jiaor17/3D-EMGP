@@ -120,6 +120,8 @@ def train(rank, config, world_size, verbose=1):
     
     for epoch in range(num_epochs):
         #train
+        if world_size > 1:
+            train_sampler.set_epoch(epoch)
         model.train()
         epoch_start = time()
         batch_losses = []
@@ -209,7 +211,7 @@ def main():
 
     torch.set_printoptions(profile="full")
 
-    parser = argparse.ArgumentParser(description='confgf')
+    parser = argparse.ArgumentParser(description='mgp')
     parser.add_argument('--config_path', type=str, help='path of dataset', required=True)
     parser.add_argument('--seed', type=int, default=2021, help='overwrite config seed')
     parser.add_argument('--steps', type=int, default=0, help='overwrite config steps')

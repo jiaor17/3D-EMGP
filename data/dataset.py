@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.data import Data, Dataset
 from torch_geometric.transforms import Compose
+from torch_geometric.utils import to_networkx
 from torch_geometric.utils import to_dense_adj, dense_to_sparse, subgraph
 from torch_scatter import scatter
 from torch_sparse import SparseTensor
@@ -21,7 +22,9 @@ import rdkit
 from rdkit import Chem
 from rdkit.Chem.rdchem import Mol, HybridizationType, BondType
 from rdkit import RDLogger
+import networkx as nx
 from tqdm import tqdm
+import math
 RDLogger.DisableLog('rdApp.*')
 
 
@@ -87,6 +90,7 @@ class GEOMDataset(Dataset):
         return self.len
 
     def __getitem__(self, idx):
+        # print(idx)
         dp_idx = idx // self.sample_per_file
         real_idx = idx % self.sample_per_file
         tar = self.data[dp_idx][real_idx].clone()
@@ -130,7 +134,6 @@ def BFS(graph):
                 continue
             visited_list.append(u)
             unvisited_set.remove(u)
-
             for v in edge_dict[u]:
                 if v not in visited_list:
                     queue.append(v)
@@ -157,6 +160,88 @@ class GEOMDatasetGPT(GEOMDataset):
             data = self.transforms(data)        
         return data
 
+class GEOMDatasetGEM(GEOMDataset):
+
+    def __init__(self, data=None, graph_per_file=None, transforms = None):
+        super(GEOMDatasetGEM, self).__init__(data, graph_per_file, transforms)
+
+    def get_bond(self, data):
+        bond_index = data.edge_index
+        row, col = bond_index
+        bond = torch.norm(data.pos[row] - data.pos[col], dim=-1)
+        data.bond_index, data.bond = bond_index, bond
+
+    def get_angle(self, data):
+        row, col = data.bond_index
+        angle_index = []
+        angle = []
+        for j in range(data.num_nodes):
+            idx_i = row[col == j]
+            idx_k = col[row == j]
+            i_num = idx_i.shape[0]
+            k_num = idx_k.shape[0]
+            if i_num * k_num > 0:
+                vec1 = data.pos[idx_i] - data.pos[j]
+                vec2 = data.pos[idx_k] - data.pos[j]
+                norm1 = torch.norm(vec1, dim=-1)
+                norm2 = torch.norm(vec2, dim=-1)
+                vec1 = vec1 / (norm1 + 1e-5).unsqueeze(-1)
+                vec2 = vec2 / (norm2 + 1e-5).unsqueeze(-1)
+                idx_i_all = idx_i.repeat_interleave(k_num)
+                idx_k_all = idx_k.repeat(i_num)
+                idx_j_all = torch.ones(i_num * k_num).long()
+                angle_all = torch.acos((vec1 @ vec2.T).reshape(-1)) / math.pi
+                angle.append(angle_all)
+                angle_index.append(torch.stack([idx_i_all, idx_j_all, idx_k_all], dim=0))
+        data.angle_index, data.angle = torch.cat(angle_index, dim=1), torch.cat(angle)
+
+    def get_dist(self, data):
+        n = data.num_nodes
+        indice = torch.arange(n).repeat([n,1])
+        row = indice.reshape(-1)
+        col = indice.T.reshape(-1)
+        dist_index = torch.stack([row, col], dim=0)
+        dist_index = dist_index[:, row != col]
+        row, col = dist_index
+        dist = torch.norm(data.pos[row] - data.pos[col], dim=-1)
+        dist = (dist / (20 / 30)).long()
+        dist = torch.clamp(dist,max=29)
+        data.dist_index, data.dist = dist_index, dist
+
+    def __getitem__(self, idx):
+        dp_idx = idx // self.sample_per_file
+        real_idx = idx % self.sample_per_file
+        d = self.data[dp_idx][real_idx]
+        if not hasattr(d,"bond_index"):
+            self.get_bond(d)
+            self.get_angle(d)
+            self.get_dist(d)
+
+        data = d.clone()
+        if self.transforms is not None:
+            data = self.transforms(data)  
+        return data
+
+
+class GEOMDatasetNoise(GEOMDataset):
+
+    def __init__(self, data=None, graph_per_file=None, transforms = None, noise_scale = 1.0):
+        super(GEOMDatasetNoise, self).__init__(data, graph_per_file, transforms)
+        self.noise_scale = noise_scale
+
+    def __getitem__(self, idx):
+        dp_idx = idx // self.sample_per_file
+        real_idx = idx % self.sample_per_file
+        d = self.data[dp_idx][real_idx]
+        if not hasattr(d, "ori_pos"):
+            d.ori_pos = d.pos
+            d.pos = d.ori_pos + torch.randn_like(d.ori_pos) * self.noise_scale
+        data = d.clone()
+        if self.transforms is not None:
+            data = self.transforms(data)  
+        return data
+
+
 class GEOMDatasetMVP(GEOMDataset):
     def __init__(self, data=None, graph_per_file=None, transforms = None, mask_ratio = 0.15):
         super(GEOMDatasetMVP, self).__init__(data, graph_per_file, transforms)
@@ -172,6 +257,21 @@ class GEOMDatasetMVP(GEOMDataset):
         given_nodes = order[:preserve]
         given_edges, given_types = subgraph(given_nodes, d.edge_index, d.edge_type, relabel_nodes=True, num_nodes = len(d.atom_type))
         data = Data(atom_type=d.atom_type[given_nodes], pos=d.pos[given_nodes], edge_index=given_edges, edge_type=given_types)
+        data_2d = data.clone()
+        if self.transforms is not None:
+            data = self.transforms(data)        
+        return data, data_2d
+
+class GEOMDataset3DInfomax(GEOMDataset):
+    def __init__(self, data=None, graph_per_file=None, transforms = None):
+        super(GEOMDataset3DInfomax, self).__init__(data, graph_per_file, transforms)
+
+    def __getitem__(self, idx):
+        # d = self.data[idx]
+        dp_idx = idx // self.sample_per_file
+        real_idx = idx % self.sample_per_file
+        d = self.data[dp_idx][real_idx]
+        data = d.clone()
         data_2d = data.clone()
         if self.transforms is not None:
             data = self.transforms(data)        
@@ -309,8 +409,6 @@ class GEOMDatasetCL(GEOMDataset):
             data1 = self.transforms(data1)   
             data2 = self.transforms(data2)
         return data1, data2
-
-
 
 class AtomOnehot:
 

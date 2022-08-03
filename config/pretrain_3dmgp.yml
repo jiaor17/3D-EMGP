@@ -16,7 +16,7 @@ train:
   loss_pred_noise: 0.2
   optimizer:
     type: Adam
-    lr: 0.001
+    lr: 0.0005
     weight_decay: 0.000
     dropout: 0.0
   scheduler:
