@@ -61,6 +61,41 @@ export CUDA_VISIBLE_DEVICES=0
 python -u script/baselines/train_attr_mask.py --config_path config/pretrain_baselines.yml
 ```
 
+### Finetuning
+
+Finetuning on QM9 :
+
+```
+python -u script/finetune_qm9.py --config_path config/finetune_qm9.yml --restore_path <pretrained_checkpoint> --property <property>
+```
+
+The property should be chosen from
+
+```
+alpha, gap, homo, lumo, mu, Cv, G, H, r2, U, U0, zpve
+```
+
+Finetuning on MD17 :
+
+```
+python -u script/finetune_qm9.py --config_path config/finetune_qm9.yml --restore_path <pretrained_checkpoint> --molecule <molecule> --model_name <molecule>
+```
+
+The molecule should be chosen from
+
+```
+aspirin
+benzene
+ethanol
+malonaldehyde
+naphthalene
+salicylic_acid
+toluene
+uracil
+```
+
+Note that the finetuning datasets will be automatically downloaded and preprocessed on the first run.
+
 ### Dependencies
 
 ```
