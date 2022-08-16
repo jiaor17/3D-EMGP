@@ -1,6 +1,6 @@
-## 3D Equivariant Molecular Graph Pretraining
+## Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs
 
-Code for 3D Equivariant Molecular Graph Pretraining.
+Code for Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs (3D-EMGP).
 
 ### Data Preparing
 
