@@ -114,11 +114,11 @@ Please consider cite our work if you find it helpful:
 
 ```
 @misc{jiao2022energy,
-  url = {https://arxiv.org/abs/2207.08824},
-  author = {Jiao, Rui and Han, Jiaqi and Huang, Wenbing and Rong, Yu and Liu, Yang},
-  title = {Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs},
-  publisher = {arXiv},
-  year = {2022}
+  url={https://arxiv.org/abs/2207.08824},
+  author={Jiao, Rui and Han, Jiaqi and Huang, Wenbing and Rong, Yu and Liu, Yang},
+  title={Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs},
+  publisher={arXiv},
+  year={2022}
 }
 ```
 
