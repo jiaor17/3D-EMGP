@@ -1,12 +1,24 @@
-## Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs
+# Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs
 
 Code for Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs (3D-EMGP).
 
-### Data Preparing
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/jiaor17/3D-EMGP/blob/main/LICENSE)   [**[Paper]**](https://arxiv.org/pdf/2207.08824.pdf)
+
+![Overview](assets/overview.png "Overview")
+
+## Dependencies
+
+```
+python==3.7.10
+torch==1.7.0
+torch-geometric==1.6.3
+```
+
+## Data Preparation
 
 The raw data of GEOM can be downloaded from [the official website](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/JNGTDF).
 
-One can download the dataset and unpack it into the `dataset` folder as follows.
+One can download the dataset and unpack it into the `dataset` folder as follows:
 
 ```
 |-- datasets
@@ -18,13 +30,13 @@ One can download the dataset and unpack it into the `dataset` folder as follows.
             |-- summary_qm9.json
 ```
 
-Preprocess the GEOM data for pretraining.
+To preprocess the GEOM data for pretraining:
 
 ```
 python data/geom.py --base_path datasets/GEOM/rdkit_folder/ --datasets qm9 --output blocks --val_num 500 --conf_num 10 --block_size 100000 --test_smiles data/filter_smiles.txt
 ```
 
-Generated data blocks are listed as follows.
+Generated data blocks are listed as follows:
 
 ```
 |-- datasets
@@ -36,9 +48,9 @@ Generated data blocks are listed as follows.
             |-- train_block_i.pkl
 ```
 
-### Pretraining
+## Pretraining
 
-3D-MGP pretraining can be conducted via the following commands.
+3D-EMGP pretraining can be conducted via the following commands.
 
 ```shell
 export CUDA_VISIBLE_DEVICES=0
@@ -61,7 +73,7 @@ export CUDA_VISIBLE_DEVICES=0
 python -u script/baselines/train_attr_mask.py --config_path config/pretrain_baselines.yml
 ```
 
-### Finetuning
+## Finetuning
 
 Finetuning on QM9 :
 
@@ -96,10 +108,17 @@ uracil
 
 Note that the finetuning datasets will be automatically downloaded and preprocessed on the first run.
 
-### Dependencies
+## Citation
+
+Please consider cite our work if you find it helpful:
 
 ```
-python==3.7.10
-torch==1.7.0
-torch-geometric==1.6.3
+@misc{jiao2022energy,
+  url = {https://arxiv.org/abs/2207.08824},
+  author = {Jiao, Rui and Han, Jiaqi and Huang, Wenbing and Rong, Yu and Liu, Yang},
+  title = {Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs},
+  publisher = {arXiv},
+  year = {2022}
+}
 ```
+
