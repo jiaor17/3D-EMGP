@@ -8,7 +8,6 @@ from torch_sparse import coalesce
 from torch_geometric.data import Data
 from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from scipy.stats import truncnorm
-from confgf import utils, layers
 from .gnns import GNN
 import pdb
 

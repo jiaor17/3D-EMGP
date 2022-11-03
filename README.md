@@ -90,7 +90,7 @@ alpha, gap, homo, lumo, mu, Cv, G, H, r2, U, U0, zpve
 Finetuning on MD17 :
 
 ```
-python -u script/finetune_qm9.py --config_path config/finetune_qm9.yml --restore_path <pretrained_checkpoint> --molecule <molecule> --model_name <molecule>
+python -u script/finetune_md17.py --config_path config/finetune_md17.yml --restore_path <pretrained_checkpoint> --molecule <molecule> --model_name <molecule>
 ```
 
 The molecule should be chosen from
