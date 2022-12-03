@@ -1,4 +1,4 @@
-# Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs
+# Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs (AAAI 2023)
 
 Code for Energy-Motivated Equivariant Pretraining for 3D Molecular Graphs (3D-EMGP).
 
