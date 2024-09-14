@@ -227,7 +227,7 @@ def gen_GEOM_blocks(base_path, datasets, output_dir, conf_per_mol=10, val_num = 
     np.random.seed(seed)
     random.seed(seed)
     block_num = len(train_data) // train_block_size + (len(train_data) % train_block_size != 0)
-    train_idx = np.arange(block_num * train_block_size)
+    train_idx = np.arange(block_num * train_block_size) % len(train_data)
     np.random.shuffle(train_idx)
     os.makedirs(os.path.join(base_path,'..',output_dir), exist_ok=True)
     for i in range(block_num):
