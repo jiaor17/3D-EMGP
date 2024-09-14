@@ -5,6 +5,7 @@ from .info_graph import InfoGraph
 from .pos_pred import PosPred
 from .graphmvp import GraphMVP
 from .graph_cl import GraphCL
+from .graph_cl_proj import GraphCLProj
 from .gem import GemPretrain
 from .supervised import Supervised
 from .infomax_3d import Infomax3D

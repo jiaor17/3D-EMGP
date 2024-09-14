@@ -13,6 +13,7 @@ train:
   clip: 5.0
   mask_ratio: 0.15
   cl_neg_samples: 1
+  gamma_joao: 0.1
   T: 0.1
   optimizer:
     type: Adam

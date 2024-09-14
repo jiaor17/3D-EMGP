@@ -12,9 +12,11 @@ import torch.nn.functional as F
 from torch_geometric.data import Data, Dataset
 from torch_geometric.transforms import Compose
 from torch_geometric.utils import to_networkx
-from torch_geometric.utils import to_dense_adj, dense_to_sparse, subgraph
+from torch_geometric.utils import to_dense_adj, dense_to_sparse, subgraph, degree
 from torch_scatter import scatter
 from torch_sparse import SparseTensor
+from torch_cluster import random_walk
+from torch.distributions.geometric import Geometric
 
 import random
 
@@ -281,7 +283,7 @@ class GEOMDatasetCL(GEOMDataset):
 
     def __init__(self, data=None, graph_per_file=None, transforms = None):
         super(GEOMDatasetCL, self).__init__(data, graph_per_file, transforms)
-        self.aug_strength = 0.2
+        self.aug_strength = 0.15
         self.aug_prob = None
         self.augmentations = [self.node_drop, self.subgraph,
                               self.edge_pert, self.attr_mask, self.no_aug]
@@ -410,6 +412,202 @@ class GEOMDatasetCL(GEOMDataset):
             data2 = self.transforms(data2)
         return data1, data2
 
+class GEOMDatasetCLProj(GEOMDataset):
+
+    def __init__(self, data=None, graph_per_file=None, transforms = None):
+        super(GEOMDatasetCLProj, self).__init__(data, graph_per_file, transforms)
+        self.aug_strength = 0.15
+        self.aug_prob = None
+        self.augmentations = [self.node_drop, self.subgraph,
+                              self.edge_pert, self.attr_mask, self.no_aug]
+
+    def set_aug_prob(self, aug_prob):
+        self.aug_prob = aug_prob
+
+    def no_aug(self,data):
+        d = Data(atom_type=data.atom_type, 
+                    pos=data.pos, 
+                    edge_index=data.edge_index, 
+                    edge_type=data.edge_type)
+        return d        
+
+    def node_drop(self, data):
+
+        node_num = data.num_nodes
+        _, edge_num = data.edge_index.size()
+        drop_num = int(node_num * self.aug_strength)
+
+        idx_perm = np.random.permutation(node_num)
+        idx_nodrop = idx_perm[drop_num:].tolist()
+        idx_nodrop.sort()
+
+        edge_idx, edge_type = subgraph(subset=idx_nodrop,
+                                       edge_index=data.edge_index,
+                                       edge_attr=data.edge_type,
+                                       relabel_nodes=True,
+                                       num_nodes=node_num)
+
+        d = Data(atom_type=data.atom_type[idx_nodrop], 
+                    pos=data.pos[idx_nodrop], 
+                    edge_index=edge_idx, 
+                    edge_type=edge_type)
+        return d
+
+    def edge_pert(self, data):
+        node_num = data.num_nodes
+        _, edge_num = data.edge_index.size()
+        pert_num = int(edge_num * self.aug_strength)
+
+        # delete edges
+        idx_drop = np.random.choice(edge_num, (edge_num - pert_num),
+                                    replace=False)
+        edge_index = data.edge_index[:, idx_drop]
+        edge_type = data.edge_type[idx_drop]
+
+        # add edges
+        adj = torch.ones((node_num, node_num))
+        adj[edge_index[0], edge_index[1]] = 0
+        # edge_index_nonexist = adj.nonzero(as_tuple=False).t()
+        edge_index_nonexist = torch.nonzero(adj, as_tuple=False).t()
+        idx_add = np.random.choice(edge_index_nonexist.shape[1],
+                                   pert_num, replace=False)
+
+        edge_index_add = edge_index_nonexist[:, idx_add]
+        edge_type_add = torch.ones(edge_index_add.shape[1])
+        edge_index = torch.cat((edge_index, edge_index_add), dim=1)
+        edge_type = torch.cat((edge_type, edge_type_add), dim=0)
+
+        d = Data(atom_type=data.atom_type, 
+                    pos=data.pos, 
+                    edge_index=edge_index, 
+                    edge_type=edge_type)
+        return d
+
+    def attr_mask(self, data):
+
+        _x = data.atom_type.clone()
+        node_num = data.num_nodes
+        mask_num = int(node_num * self.aug_strength)
+
+        token = data.atom_type.float().mean(dim=0).long()
+        idx_mask = np.random.choice(
+            node_num, mask_num, replace=False)
+
+        _x[idx_mask] = token
+        d = Data(atom_type=_x, 
+            pos=data.pos, 
+            edge_index=data.edge_index, 
+            edge_type=data.edge_type)
+        return d
+
+    def subgraph(self, data):
+
+        order = BFS(data)
+
+        node_num = data.num_nodes
+
+        idx_preserve = max(int(node_num * (1 - self.aug_strength)), 3)
+
+        idx_nondrop = order[:idx_preserve]
+
+        edge_idx, edge_type = subgraph(subset=idx_nondrop,
+                                       edge_index=data.edge_index,
+                                       edge_attr=data.edge_type,
+                                       relabel_nodes=True,
+                                       num_nodes=node_num)
+
+        d = Data(atom_type=data.atom_type[idx_nondrop], 
+                    pos=data.pos[idx_nondrop], 
+                    edge_index=edge_idx, 
+                    edge_type=edge_type)
+        return d
+
+    def __getitem__(self, idx):
+        # d = self.data[idx]
+        dp_idx = idx // self.sample_per_file
+        real_idx = idx % self.sample_per_file
+        d = self.data[dp_idx][real_idx]
+
+        data1, data2 = d.clone(), d.clone()
+
+        if self.aug_prob is None:
+            n_aug = np.random.choice(25, 1)[0]
+            n_aug1, n_aug2 = n_aug // 5, n_aug % 5
+            data1 = self.augmentations[n_aug1](data1)
+            data2 = self.augmentations[n_aug2](data2)
+        else:
+            n_aug = np.random.choice(25, 1, p=self.aug_prob)[0]
+            n_aug1, n_aug2 = n_aug // 5, n_aug % 5
+            data1 = self.augmentations[n_aug1](data1)
+            data2 = self.augmentations[n_aug2](data2)
+        if self.transforms is not None:
+            data1 = self.transforms(data1)   
+            data2 = self.transforms(data2)
+        data1.aug = n_aug1
+        data2.aug = n_aug2
+        return data1, data2
+
+class GEOMDatasetGCC(GEOMDataset):
+
+    def __init__(self, data=None, graph_per_file=None, transforms = None, restart_prob=0.8, max_len=64):
+        super(GEOMDatasetGCC, self).__init__(data, graph_per_file, transforms)
+        self.prob_generator = Geometric(1 - restart_prob)
+        self.max_len = max_len
+
+    def multimax(self,x):
+        return (x == torch.max(x)).nonzero(as_tuple=True)[0]
+
+    def __getitem__(self, idx):
+        dp_idx = idx // self.sample_per_file
+        real_idx = idx % self.sample_per_file
+        d = self.data[dp_idx][real_idx].clone()
+
+        res = self.multimax(degree(d.edge_index[0], d.num_nodes))
+        rt = np.random.choice(res)
+
+        steps1 = int(self.prob_generator.sample().item())
+        steps1 = min(steps1, self.max_len)
+
+        trace1 = torch.LongTensor([rt])
+        if steps1 > 0:
+            trace1 = random_walk(d.edge_index[0],d.edge_index[1],trace1,walk_length=steps1)
+        subg1 = torch.unique(trace1[0])
+
+        steps2 = int(self.prob_generator.sample().item())
+        steps2 = min(steps2, self.max_len)
+
+        trace2 = torch.LongTensor([rt])
+        if steps2 > 0:
+            trace2 = random_walk(d.edge_index[0],d.edge_index[1],trace2,walk_length=steps2)
+        subg2 = torch.unique(trace2[0])
+        
+        edge_idx1, edge_type1 = subgraph(subset=subg1,
+                                    edge_index=d.edge_index,
+                                    edge_attr=d.edge_type,
+                                    relabel_nodes=True,
+                                    num_nodes=d.num_nodes)
+
+        edge_idx2, edge_type2 = subgraph(subset=subg2,
+                                    edge_index=d.edge_index,
+                                    edge_attr=d.edge_type,
+                                    relabel_nodes=True,
+                                    num_nodes=d.num_nodes)
+
+        data1 = Data(atom_type=d.atom_type[subg1], 
+                    pos=d.pos[subg1], 
+                    edge_index=edge_idx1, 
+                    edge_type=edge_type1)
+
+        data2 = Data(atom_type=d.atom_type[subg2], 
+                pos=d.pos[subg2], 
+                edge_index=edge_idx2, 
+                edge_type=edge_type2)    
+
+        if self.transforms is not None:
+            data1 = self.transforms(data1)   
+            data2 = self.transforms(data2)
+        return data1, data2 
+
 class AtomOnehot:
 
     # global process_input
@@ -475,7 +673,6 @@ class EdgeHop:
         return order_mat
 
     def __call__(self,data):
-        # print(data.edge_type.max())
         if data.edge_index.shape[1] == 0:
             ans = 1 - torch.eye(data.pos.shape[0], dtype=torch.long)
         else:
